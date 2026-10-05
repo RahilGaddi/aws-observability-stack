@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["localhost:9093"]
+
+rule_files:
+  - "alert.rules.yml"
+
+scrape_configs:
+
+  # Prometheus
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Monitoring Server - node-server
+  - job_name: "monitoring-node-exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+        labels:
+          server: "node-server"
+
+  # Frontend ASG instances
+  - job_name: "frontend-node-exporter"
+    ec2_sd_configs:
+      - region: eu-north-1
+        port: 9100
+        filters:
+          - name: "tag:Name"
+            values: ["Frontend"]
+    relabel_configs:
+      - source_labels: [__meta_ec2_private_ip]
+        regex: (.*)
+        target_label: __address__
+        replacement: "$1:9100"
+
+  # Backend ASG instances
+  - job_name: "backend-node-exporter"
+    ec2_sd_configs:
+      - region: eu-north-1
+        port: 9100
+        filters:
+          - name: "tag:Name"
+            values: ["Backend"]
+    relabel_configs:
+      - source_labels: [__meta_ec2_private_ip]
+        regex: (.*)
+        target_label: __address__
+        replacement: "$1:9100"
